@@ -70,6 +70,7 @@ export function GameCanvas({
   }, [onGameOver]);
 
   useEffect(() => {
+    const assetBase = `${import.meta.env.BASE_URL}assets/`;
     const image = new Image();
     const trackImage = new Image();
     const boothImage = new Image();
@@ -77,12 +78,12 @@ export function GameCanvas({
     const officeImage = new Image();
     const paddockImage = new Image();
 
-    image.src = '/assets/player-portrait.png';
-    trackImage.src = '/assets/track-portrait.png';
-    boothImage.src = '/assets/booth-portrait.png';
-    standsImage.src = '/assets/stands-portrait.png';
-    officeImage.src = '/assets/office-portrait.png';
-    paddockImage.src = '/assets/paddock-portrait.png';
+    image.src = `${assetBase}player-portrait.png`;
+    trackImage.src = `${assetBase}track-portrait.png`;
+    boothImage.src = `${assetBase}booth-portrait.png`;
+    standsImage.src = `${assetBase}stands-portrait.png`;
+    officeImage.src = `${assetBase}office-portrait.png`;
+    paddockImage.src = `${assetBase}paddock-portrait.png`;
 
     image.onload = () => {
       portraitImageRef.current = image;
