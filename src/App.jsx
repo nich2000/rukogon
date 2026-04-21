@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { GameCanvas } from './components/GameCanvas';
 import { Hud } from './components/Hud';
@@ -12,14 +12,67 @@ import './styles/app.css';
 
 const STORAGE_KEY = 'rukogon-save';
 
+function isValidMapRows(mapRows) {
+  if (!Array.isArray(mapRows) || !mapRows.length) {
+    return false;
+  }
+
+  const width = mapRows[0]?.length;
+  const validSymbols = new Set(Object.values(TILE_SYMBOLS));
+
+  return mapRows.every(
+    (row) =>
+      typeof row === 'string'
+      && row.length === width
+      && row.split('').every((symbol) => validSymbols.has(symbol)),
+  );
+}
+
+function normalizeLabelPositions(labelPositions) {
+  const requiredLabels = Object.keys(DEFAULT_LABEL_POSITIONS);
+
+  if (!labelPositions || typeof labelPositions !== 'object') {
+    return null;
+  }
+
+  const isValid = requiredLabels.every((key) => {
+    const point = labelPositions[key];
+    return point && Number.isFinite(point.x) && Number.isFinite(point.y);
+  });
+
+  if (!isValid) {
+    return null;
+  }
+
+  return requiredLabels.reduce((acc, key) => {
+    acc[key] = {
+      x: labelPositions[key].x,
+      y: labelPositions[key].y,
+    };
+    return acc;
+  }, {});
+}
+
+function hasLegacyDefaultMap(saveData) {
+  if (!Array.isArray(saveData?.customMapRows) || !saveData?.labelPositions) {
+    return false;
+  }
+
+  return (
+    JSON.stringify(saveData.customMapRows) === JSON.stringify(DEFAULT_MAP_ROWS)
+    && JSON.stringify(saveData.labelPositions) === JSON.stringify(DEFAULT_LABEL_POSITIONS)
+  );
+}
+
 const defaultSave = {
   bestScore: 0,
   sessions: 0,
   audioEnabled: false,
   autoEnabled: false,
   mobileProblemsEnabled: false,
-  customMapRows: DEFAULT_MAP_ROWS,
-  labelPositions: DEFAULT_LABEL_POSITIONS,
+  npcEnabled: true,
+  customMapRows: null,
+  labelPositions: null,
 };
 
 function App() {
@@ -30,14 +83,77 @@ function App() {
   const [selectedTileType, setSelectedTileType] = useState(TILE_TYPES.asphalt);
   const [lastGameOverReason, setLastGameOverReason] = useState(null);
   const [importError, setImportError] = useState(null);
-  const mapRows = saveData.customMapRows || DEFAULT_MAP_ROWS;
-  const labelPositions = saveData.labelPositions || DEFAULT_LABEL_POSITIONS;
+  const [defaultTrackData, setDefaultTrackData] = useState({
+    mapRows: DEFAULT_MAP_ROWS,
+    labelPositions: DEFAULT_LABEL_POSITIONS,
+  });
+  const mapRows = saveData.customMapRows || defaultTrackData.mapRows;
+  const labelPositions = saveData.labelPositions || defaultTrackData.labelPositions;
   const config = useMemo(
     () => createGameConfig(mapRows, labelPositions, {
       mobileProblemsEnabled: saveData.mobileProblemsEnabled,
+      npcEnabled: saveData.npcEnabled,
     }),
-    [labelPositions, mapRows, saveData.mobileProblemsEnabled],
+    [labelPositions, mapRows, saveData.mobileProblemsEnabled, saveData.npcEnabled],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDefaultTrack = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.BASE_URL}tracks/default.json`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const parsed = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        const nextMapRows = isValidMapRows(parsed?.mapRows) ? parsed.mapRows : DEFAULT_MAP_ROWS;
+        const nextLabelPositions =
+          normalizeLabelPositions(parsed?.labelPositions) || DEFAULT_LABEL_POSITIONS;
+
+        setDefaultTrackData({
+          mapRows: nextMapRows,
+          labelPositions: nextLabelPositions,
+        });
+      } catch {
+        if (!cancelled) {
+          setDefaultTrackData({
+            mapRows: DEFAULT_MAP_ROWS,
+            labelPositions: DEFAULT_LABEL_POSITIONS,
+          });
+        }
+      }
+    };
+
+    loadDefaultTrack();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setSaveData]);
+
+  useEffect(() => {
+    if (!hasLegacyDefaultMap(saveData)) {
+      return;
+    }
+
+    setSaveData((prev) => {
+      if (!hasLegacyDefaultMap(prev)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        customMapRows: defaultTrackData.mapRows,
+        labelPositions: defaultTrackData.labelPositions,
+      };
+    });
+  }, [defaultTrackData.labelPositions, defaultTrackData.mapRows, saveData, setSaveData]);
 
   const handleStart = () => {
     if (!config.map.isPlayable) {
@@ -75,6 +191,18 @@ function App() {
     }
   };
 
+  const handleResume = () => {
+    if (mode === GAME_MODES.paused) {
+      setMode(GAME_MODES.running);
+    }
+  };
+
+  const handleStop = () => {
+    if (mode === GAME_MODES.running || mode === GAME_MODES.paused) {
+      setMode(GAME_MODES.menu);
+    }
+  };
+
   const handleToggleAudio = () => {
     setSaveData((prev) => ({
       ...prev,
@@ -96,6 +224,13 @@ function App() {
     }));
   };
 
+  const handleToggleNpc = () => {
+    setSaveData((prev) => ({
+      ...prev,
+      npcEnabled: !(prev.npcEnabled ?? true),
+    }));
+  };
+
   const handleToggleEditor = () => {
     setEditorMode((current) => !current);
     setMode((currentMode) =>
@@ -107,8 +242,8 @@ function App() {
     setImportError(null);
     setSaveData((prev) => ({
       ...prev,
-      customMapRows: DEFAULT_MAP_ROWS,
-      labelPositions: DEFAULT_LABEL_POSITIONS,
+      customMapRows: defaultTrackData.mapRows,
+      labelPositions: defaultTrackData.labelPositions,
     }));
   };
 
@@ -118,7 +253,7 @@ function App() {
     }
 
     setSaveData((prev) => {
-      const rows = [...(prev.customMapRows || DEFAULT_MAP_ROWS)];
+      const rows = [...(prev.customMapRows || defaultTrackData.mapRows)];
       const nextRow = rows[tileY].split('');
       nextRow[tileX] = TILE_SYMBOLS[selectedTileType];
       rows[tileY] = nextRow.join('');
@@ -157,37 +292,14 @@ function App() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const validSymbols = new Set(Object.values(TILE_SYMBOLS));
       const nextRows = parsed?.mapRows;
-      const nextLabels = parsed?.labelPositions;
+      const nextLabels = normalizeLabelPositions(parsed?.labelPositions);
 
-      if (!Array.isArray(nextRows) || !nextRows.length) {
-        throw new Error('В файле нет массива mapRows.');
-      }
-
-      const width = nextRows[0].length;
-      const rowsValid = nextRows.every(
-        (row) =>
-          typeof row === 'string'
-          && row.length === width
-          && row.split('').every((symbol) => validSymbols.has(symbol)),
-      );
-
-      if (!rowsValid) {
+      if (!isValidMapRows(nextRows)) {
         throw new Error('mapRows содержит строки неверного формата или неизвестные тайлы.');
       }
 
-      if (!nextLabels || typeof nextLabels !== 'object') {
-        throw new Error('В файле нет объекта labelPositions.');
-      }
-
-      const requiredLabels = Object.keys(DEFAULT_LABEL_POSITIONS);
-      const labelsValid = requiredLabels.every((key) => {
-        const point = nextLabels[key];
-        return point && Number.isFinite(point.x) && Number.isFinite(point.y);
-      });
-
-      if (!labelsValid) {
+      if (!nextLabels) {
         throw new Error('labelPositions содержит неполные или некорректные координаты.');
       }
 
@@ -195,13 +307,7 @@ function App() {
       setSaveData((prev) => ({
         ...prev,
         customMapRows: nextRows,
-        labelPositions: requiredLabels.reduce((acc, key) => {
-          acc[key] = {
-            x: nextLabels[key].x,
-            y: nextLabels[key].y,
-          };
-          return acc;
-        }, {}),
+        labelPositions: nextLabels,
       }));
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Не удалось загрузить карту.');
@@ -216,11 +322,72 @@ function App() {
     setSaveData((prev) => ({
       ...prev,
       labelPositions: {
-        ...(prev.labelPositions || DEFAULT_LABEL_POSITIONS),
+        ...(prev.labelPositions || defaultTrackData.labelPositions),
         [key]: { x, y },
       },
     }));
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (editorMode) {
+        return;
+      }
+
+      const target = event.target;
+      const isTextInput =
+        target instanceof HTMLElement
+        && (
+          target.tagName === 'INPUT'
+          || target.tagName === 'TEXTAREA'
+          || target.isContentEditable
+        );
+
+      if (isTextInput) {
+        return;
+      }
+
+      if (event.code === 'Space') {
+        event.preventDefault();
+
+        if (mode === GAME_MODES.running) {
+          handlePause();
+          return;
+        }
+
+        if (mode === GAME_MODES.paused) {
+          handleResume();
+          return;
+        }
+
+        if (config.map.isPlayable) {
+          handleStart();
+        }
+      }
+
+      if (event.code === 'Escape') {
+        if (mode === GAME_MODES.running || mode === GAME_MODES.paused) {
+          event.preventDefault();
+          handleStop();
+        }
+      }
+
+      if (event.code === 'Enter') {
+        if (mode !== GAME_MODES.running && config.map.isPlayable) {
+          event.preventDefault();
+          setLastGameOverReason(null);
+          setRunSeed((seed) => seed + 1);
+          setMode(GAME_MODES.running);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [config.map.isPlayable, editorMode, mode]);
 
   return (
     <div className="app-shell">
@@ -234,14 +401,17 @@ function App() {
             isPaused={mode === GAME_MODES.paused}
             canStart={config.map.isPlayable}
             onStart={handleStart}
+            onStop={handleStop}
             onPause={handlePause}
-            onResume={handleStart}
+            onResume={handleResume}
             audioEnabled={saveData.audioEnabled}
             onToggleAudio={handleToggleAudio}
             autoEnabled={Boolean(saveData.autoEnabled)}
             onToggleAuto={handleToggleAuto}
             mobileProblemsEnabled={Boolean(saveData.mobileProblemsEnabled)}
             onToggleMobileProblems={handleToggleMobileProblems}
+            npcEnabled={saveData.npcEnabled ?? true}
+            onToggleNpc={handleToggleNpc}
             editorMode={editorMode}
             onToggleEditor={handleToggleEditor}
             editorContent={

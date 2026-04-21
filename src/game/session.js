@@ -3,7 +3,13 @@ import { updatePlayerMovement } from './systems/movementSystem';
 
 export function createGameSession({ config, onGameOver }) {
   const state = createInitialState(config);
-  const { spawning, mobileProblems, resolution, pressure } = config.algorithms;
+  const {
+    backgroundNpcs,
+    spawning,
+    mobileProblems,
+    resolution,
+    pressure,
+  } = config.algorithms;
   let destroyed = false;
   let gameOverNotified = false;
 
@@ -14,6 +20,7 @@ export function createGameSession({ config, onGameOver }) {
       }
 
       state.time += deltaTime;
+      backgroundNpcs.update(state, config, deltaTime);
       updatePlayerMovement(state, inputState, config, deltaTime);
       spawning.update(state, config, deltaTime);
       mobileProblems.update(state, config, deltaTime);

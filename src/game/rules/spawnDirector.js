@@ -1,3 +1,36 @@
+const PROBLEM_QUOTES = {
+  incident: [
+    'Где главный?',
+    'Это точно не по плану',
+    'Тут уже дымит',
+    'Кто пустил это на трассу?',
+  ],
+  paperwork: [
+    'Телефон опять звонит',
+    'Срочно подпишите',
+    'Это надо согласовать',
+    'Где печать?',
+  ],
+  crowd: [
+    'Это не дождь, это атмосфера',
+    'Нас тут заливает',
+    'Кто включил погоду?',
+    'Трибуны хотят объяснений',
+  ],
+  fraud: [
+    'Я тут вообще по спискам',
+    'Билет был, честно',
+    'У меня проход где-то тут',
+    'Это VIP недоразумение',
+  ],
+  dispute: [
+    'У нас колесо пропало',
+    'Но не наше колесо',
+    'Это вообще чьи шины?',
+    'Тут спор на четыре колеса',
+  ],
+};
+
 function pickWeightedProblemType(problemCatalog) {
   const entries = Object.entries(problemCatalog);
   const totalWeight = entries.reduce((sum, [, definition]) => sum + definition.weight, 0);
@@ -11,6 +44,11 @@ function pickWeightedProblemType(problemCatalog) {
   }
 
   return entries[0];
+}
+
+function pickProblemQuote(type) {
+  const quotes = PROBLEM_QUOTES[type] || ['Где главный?'];
+  return quotes[Math.floor(Math.random() * quotes.length)];
 }
 
 function createProblem({ type, definition, state, config }) {
@@ -44,6 +82,7 @@ function createProblem({ type, definition, state, config }) {
     severity: definition.severity,
     createdAt: state.time,
     animationPhase: 0,
+    quote: pickProblemQuote(type),
     mobile: isMobile,
     moving: false,
     caughtByPlayer: false,

@@ -13,6 +13,10 @@ function drawPixelSprite(context, sprite, x, y, scale) {
   });
 }
 
+function tintSprite(sprite, fromColor, toColor) {
+  return sprite.map((row) => row.map((color) => (color === fromColor ? toColor : color)));
+}
+
 const COLORS = {
   skin: '#f3c98b',
   jacket: '#ef7d22',
@@ -159,54 +163,65 @@ function renderPhoneAnimation(context, x, y, pulse) {
   context.restore();
 }
 
-function renderCrowdAnimation(context, x, y, pulse) {
-  const sway = Math.sin(pulse * 2.5) * 5;
+function renderRainAnimation(context, x, y, pulse) {
+  const drift = Math.sin(pulse * 1.8) * 2;
   context.save();
-  context.strokeStyle = 'rgba(255, 245, 233, 0.9)';
-  context.lineWidth = 3;
-  context.beginPath();
-  context.moveTo(x - 16, y - 18);
-  context.lineTo(x - 16 + sway, y - 34);
-  context.lineTo(x - 8 + sway, y - 28);
-  context.stroke();
-  context.beginPath();
-  context.moveTo(x + 16, y - 18);
-  context.lineTo(x + 16 - sway, y - 34);
-  context.lineTo(x + 8 - sway, y - 28);
-  context.stroke();
+  context.strokeStyle = 'rgba(136, 201, 249, 0.85)';
+  context.lineWidth = 2.5;
+  [-14, -4, 6, 16].forEach((offset, index) => {
+    const sway = drift * (index % 2 === 0 ? 1 : -1);
+    context.beginPath();
+    context.moveTo(x + offset + sway, y - 20);
+    context.lineTo(x + offset - 4 + sway, y - 8);
+    context.stroke();
+  });
+  context.fillStyle = 'rgba(88, 116, 163, 0.32)';
+  context.fillRect(x - 18, y + 8, 36, 4);
   context.restore();
 }
 
-function renderTheftAnimation(context, x, y, pulse) {
-  const sneak = Math.sin(pulse * 2.1) * 6;
+function renderTicketAnimation(context, x, y, pulse) {
+  const bob = Math.sin(pulse * 2.2) * 2;
   context.save();
-  context.strokeStyle = `rgba(34, 32, 52, 0.95)`;
-  context.lineWidth = 3;
+  context.translate(0, bob);
+  context.fillStyle = 'rgba(242, 237, 215, 0.95)';
+  context.strokeStyle = 'rgba(191, 63, 54, 0.85)';
+  context.lineWidth = 2;
   context.beginPath();
-  context.moveTo(x - 12, y + 10);
-  context.lineTo(x + 10, y - 8);
+  context.roundRect(x - 14, y - 12, 18, 24, 4);
+  context.fill();
   context.stroke();
   context.beginPath();
-  context.moveTo(x - 14 + sneak * 0.2, y - 6);
-  context.lineTo(x - 4 + sneak * 0.2, y - 12);
+  context.roundRect(x - 2, y - 8, 16, 20, 4);
+  context.fill();
   context.stroke();
-  context.fillStyle = `rgba(229, 165, 45, ${0.35 + Math.abs(Math.sin(pulse * 3)) * 0.45})`;
-  context.fillRect(x + 2, y - 2, 10, 10);
+  context.fillStyle = 'rgba(61, 111, 158, 0.85)';
+  context.fillRect(x - 9, y - 4, 8, 3);
+  context.fillRect(x + 3, y, 7, 3);
   context.restore();
 }
 
-function renderDisputeAnimation(context, x, y, pulse) {
-  const argue = Math.sin(pulse * 3.4);
+function renderWheelAnimation(context, x, y, pulse) {
+  const spin = pulse * 5.2;
   context.save();
-  context.fillStyle = `rgba(255, 245, 233, ${0.45 + Math.abs(argue) * 0.4})`;
+  context.strokeStyle = 'rgba(34, 32, 52, 0.95)';
+  context.lineWidth = 3;
   context.beginPath();
-  context.arc(x - 10, y - 18, 7 + Math.max(argue, 0) * 2, 0, Math.PI * 2);
-  context.fill();
+  context.arc(x - 9, y, 10, 0, Math.PI * 2);
+  context.stroke();
   context.beginPath();
-  context.arc(x + 10, y - 18, 7 + Math.max(-argue, 0) * 2, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = `rgba(191, 63, 54, ${0.25 + Math.abs(argue) * 0.45})`;
-  context.fillRect(x - 3, y - 24, 6, 12);
+  context.arc(x + 9, y, 10, 0, Math.PI * 2);
+  context.stroke();
+  context.strokeStyle = 'rgba(255, 245, 233, 0.85)';
+  context.lineWidth = 2;
+  [-9, 9].forEach((offset) => {
+    context.beginPath();
+    context.moveTo(x + offset, y);
+    context.lineTo(x + offset + Math.cos(spin) * 7, y + Math.sin(spin) * 7);
+    context.moveTo(x + offset, y);
+    context.lineTo(x + offset + Math.cos(spin + Math.PI / 2) * 7, y + Math.sin(spin + Math.PI / 2) * 7);
+    context.stroke();
+  });
   context.restore();
 }
 
@@ -224,6 +239,18 @@ export function renderBotCarrier(context, problem, animationFrame) {
   context.save();
   context.globalAlpha = problem.caughtByPlayer ? 0.8 : 0.95;
   drawPixelSprite(context, sprite, problem.x - 10, problem.y - 14, 5);
+  context.restore();
+}
+
+export function renderBackgroundNpc(context, npc, animationFrame) {
+  const facing = npc.facing || 'down';
+  const frames = HERO_FRAMES[facing] || HERO_FRAMES.down;
+  const baseSprite = frames[npc.moving ? animationFrame % frames.length : 0];
+  const tintedSprite = tintSprite(baseSprite, COLORS.jacket, npc.color || COLORS.blue);
+
+  context.save();
+  context.globalAlpha = 0.92;
+  drawPixelSprite(context, tintedSprite, npc.x - 9, npc.y - 13, 4);
   context.restore();
 }
 
@@ -247,14 +274,14 @@ export function renderProblemAnimation(context, problem, x, y, pulse) {
   }
 
   if (problem.type === PROBLEM_TYPES.crowd) {
-    renderCrowdAnimation(context, x, y, pulse);
+    renderRainAnimation(context, x, y, pulse);
   }
 
   if (problem.type === PROBLEM_TYPES.fraud) {
-    renderTheftAnimation(context, x, y, pulse);
+    renderTicketAnimation(context, x, y, pulse);
   }
 
   if (problem.type === PROBLEM_TYPES.dispute) {
-    renderDisputeAnimation(context, x, y, pulse);
+    renderWheelAnimation(context, x, y, pulse);
   }
 }

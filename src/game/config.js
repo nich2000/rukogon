@@ -10,6 +10,9 @@ export function createGameConfig(mapRows, labelPositions, options = {}) {
     tileSize: TILE_SIZE,
     map,
     algorithms,
+    npcs: {
+      enabled: options.npcEnabled ?? true,
+    },
     player: {
       speed: 140,
       radius: 14,

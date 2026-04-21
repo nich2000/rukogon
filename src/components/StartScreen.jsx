@@ -22,6 +22,9 @@ export function StartScreen({ mode, bestScore, onStart, reason, mapErrors }) {
         Двигайся стрелками или `WASD` только по дорогам и тропинкам. Подойди к
         проблеме и удерживай позицию, пока шкала решения не заполнится.
       </p>
+      <p>
+        `Пробел` — старт и пауза, `Enter` — новый заезд, `Esc` — завершить текущую игру.
+      </p>
       {reason ? <p className="danger-text">{reason}</p> : null}
       {mapErrors.length ? (
         <ul className="tips-list">

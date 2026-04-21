@@ -1,5 +1,6 @@
 import { PROBLEM_TYPES, TILE_TYPES } from '../constants';
 import {
+  renderBackgroundNpc,
   renderBotCarrier,
   renderHeroSprite,
   renderProblemAnimation,
@@ -94,6 +95,64 @@ function renderZoneLabels(context, config) {
   });
 }
 
+function renderProblemQuote(context, problem, x, y) {
+  if (!problem.quote) {
+    return;
+  }
+
+  const text = problem.quote;
+  const bubbleY = y - 42;
+
+  context.save();
+  context.font = '700 11px monospace';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+
+  const textWidth = context.measureText(text).width;
+  const bubbleWidth = Math.min(168, Math.max(68, textWidth + 16));
+  const bubbleHeight = 20;
+  const bubbleX = x - bubbleWidth / 2;
+
+  context.fillStyle = 'rgba(18, 21, 24, 0.84)';
+  context.strokeStyle = 'rgba(248, 242, 220, 0.22)';
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8);
+  context.fill();
+  context.stroke();
+
+  context.beginPath();
+  context.moveTo(x - 6, bubbleY + bubbleHeight);
+  context.lineTo(x, bubbleY + bubbleHeight + 6);
+  context.lineTo(x + 6, bubbleY + bubbleHeight);
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = '#f8f2dc';
+  context.fillText(text, x, bubbleY + bubbleHeight / 2 + 0.5);
+  context.restore();
+}
+
+function renderNpcs(context, state) {
+  state.npcs.forEach((npc) => {
+    renderBackgroundNpc(context, npc, Math.floor(npc.animationPhase * 2));
+
+    context.save();
+    context.font = '700 9px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    const text = npc.type === 'blogger' ? 'стрим' : npc.type === 'radio' ? 'прием' : 'щелк';
+    const width = context.measureText(text).width + 8;
+    context.fillStyle = 'rgba(18, 21, 24, 0.72)';
+    context.beginPath();
+    context.roundRect(npc.x - width / 2, npc.y - 26, width, 14, 6);
+    context.fill();
+    context.fillStyle = '#f8f2dc';
+    context.fillText(text, npc.x, npc.y - 19);
+    context.restore();
+  });
+}
+
 function renderProblems(context, state, config) {
   state.problems.forEach((problem) => {
     const x =
@@ -126,6 +185,8 @@ function renderProblems(context, state, config) {
     } else {
       renderProblemAnimation(context, problem, x, y, problem.animationPhase * 2);
     }
+
+    renderProblemQuote(context, problem, x, y);
 
     context.fillStyle = 'rgba(0, 0, 0, 0.45)';
     context.fillRect(x - 18, y + 18, 36, 6);
@@ -318,6 +379,7 @@ function renderEditorLabels(context, config) {
 export function renderScene(context, state, config, options = {}) {
   context.clearRect(0, 0, config.map.pixelWidth, config.map.pixelHeight);
   renderMap(context, state, config);
+  renderNpcs(context, state);
   renderEffects(context, state, config);
   renderProblems(context, state, config);
   renderPlayerAura(context, state, config);

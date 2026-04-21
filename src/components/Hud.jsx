@@ -5,6 +5,7 @@ export function Hud({
   isPaused,
   canStart,
   onStart,
+  onStop,
   onPause,
   onResume,
   audioEnabled,
@@ -13,6 +14,8 @@ export function Hud({
   onToggleAuto,
   mobileProblemsEnabled,
   onToggleMobileProblems,
+  npcEnabled,
+  onToggleNpc,
   editorMode,
   onToggleEditor,
   editorContent,
@@ -39,11 +42,21 @@ export function Hud({
       <section className="hud-card">
         <p className="eyebrow">Управление</p>
         <div className="hud-actions">
-          <button type="button" className="audio-toggle" onClick={isPaused ? onResume : onStart} disabled={!canStart && !isPaused}>
-            Старт
+          <button
+            type="button"
+            className="audio-toggle"
+            onClick={isRunning || isPaused ? onStop : onStart}
+            disabled={!canStart && !isRunning && !isPaused}
+          >
+            {isRunning || isPaused ? 'Стоп' : 'Старт'}
           </button>
-          <button type="button" className="ghost-button" onClick={onPause} disabled={!isRunning}>
-            Пауза
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={isPaused ? onResume : onPause}
+            disabled={!isRunning && !isPaused}
+          >
+            {isPaused ? 'Продолжить' : 'Пауза'}
           </button>
           <button type="button" className="ghost-button" onClick={onToggleEditor}>
             {editorMode ? 'Режим редактирования: вкл' : 'Режим редактирования: выкл'}
@@ -65,6 +78,9 @@ export function Hud({
             </button>
             <button type="button" className="ghost-button" onClick={onToggleMobileProblems}>
               Подвижные проблемы: {mobileProblemsEnabled ? 'вкл' : 'выкл'}
+            </button>
+            <button type="button" className="ghost-button" onClick={onToggleNpc}>
+              NPC: {npcEnabled ? 'вкл' : 'выкл'}
             </button>
           </div>
         </section>

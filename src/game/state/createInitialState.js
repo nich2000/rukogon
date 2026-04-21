@@ -2,6 +2,7 @@ import { TILE_SIZE } from '../constants';
 
 export function createInitialState(config) {
   const startTile = config.map.startTile;
+  const npcs = config.algorithms.backgroundNpcs.createInitialNpcs(config);
 
   return {
     time: 0,
@@ -17,6 +18,7 @@ export function createInitialState(config) {
       facing: 'down',
       moving: false,
     },
+    npcs,
     problems: [],
     effects: [],
     nextProblemId: 1,

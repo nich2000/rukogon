@@ -233,7 +233,9 @@ export function createMapDefinition(
   const width = mapRows[0].length;
   const height = mapRows.length;
   const isWalkable = (tileType) =>
-    tileType === TILE_TYPES.asphalt || tileType === TILE_TYPES.path;
+    tileType === TILE_TYPES.asphalt
+    || tileType === TILE_TYPES.path
+    || tileType === TILE_TYPES.paddock;
   const zones = createZones(tiles, isWalkable);
   const walkableTiles = collectWalkableTiles(tiles, isWalkable);
   const startTile = zones[ZONE_TYPES.headquarters].spawnPoints[0]
