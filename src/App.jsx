@@ -69,6 +69,7 @@ const defaultSave = {
   sessions: 0,
   audioEnabled: false,
   autoEnabled: false,
+  mouseControlEnabled: false,
   mobileProblemsEnabled: false,
   npcEnabled: true,
   customMapRows: null,
@@ -214,6 +215,13 @@ function App() {
     setSaveData((prev) => ({
       ...prev,
       autoEnabled: !prev.autoEnabled,
+    }));
+  };
+
+  const handleToggleMouseControl = () => {
+    setSaveData((prev) => ({
+      ...prev,
+      mouseControlEnabled: !prev.mouseControlEnabled,
     }));
   };
 
@@ -408,6 +416,8 @@ function App() {
             onToggleAudio={handleToggleAudio}
             autoEnabled={Boolean(saveData.autoEnabled)}
             onToggleAuto={handleToggleAuto}
+            mouseControlEnabled={Boolean(saveData.mouseControlEnabled)}
+            onToggleMouseControl={handleToggleMouseControl}
             mobileProblemsEnabled={Boolean(saveData.mobileProblemsEnabled)}
             onToggleMobileProblems={handleToggleMobileProblems}
             npcEnabled={saveData.npcEnabled ?? true}
@@ -446,6 +456,7 @@ function App() {
             isActive={mode === GAME_MODES.running && !editorMode}
             audioEnabled={saveData.audioEnabled}
             autoEnabled={Boolean(saveData.autoEnabled)}
+            mouseControlEnabled={Boolean(saveData.mouseControlEnabled)}
             onGameOver={handleGameOver}
             onReturnToMenu={handleReturnToMenu}
             editorMode={editorMode}

@@ -12,6 +12,7 @@ export function GameCanvas({
   isActive,
   audioEnabled,
   autoEnabled,
+  mouseControlEnabled,
   onGameOver,
   onReturnToMenu,
   editorMode,
@@ -25,7 +26,9 @@ export function GameCanvas({
   const lastPaintedTileRef = useRef(null);
   const isActiveRef = useRef(isActive);
   const autoEnabledRef = useRef(autoEnabled);
+  const mouseControlEnabledRef = useRef(mouseControlEnabled);
   const editorModeRef = useRef(editorMode);
+  const mouseTargetRef = useRef(null);
   const onGameOverRef = useRef(onGameOver);
   const portraitImageRef = useRef(null);
   const trackPortraitImageRef = useRef(null);
@@ -60,6 +63,13 @@ export function GameCanvas({
   useEffect(() => {
     autoEnabledRef.current = autoEnabled;
   }, [autoEnabled]);
+
+  useEffect(() => {
+    mouseControlEnabledRef.current = mouseControlEnabled;
+    if (!mouseControlEnabled) {
+      mouseTargetRef.current = null;
+    }
+  }, [mouseControlEnabled]);
 
   useEffect(() => {
     editorModeRef.current = editorMode;
@@ -182,9 +192,23 @@ export function GameCanvas({
       previousTime = time;
 
       const state = session.getState();
-      const nextInput = autoEnabledRef.current
-        ? autoPilot.getInput(state, config)
-        : input.getState();
+      const keyboardInput = input.getState();
+      let nextInput = keyboardInput;
+
+      if (autoEnabledRef.current) {
+        nextInput = autoPilot.getInput(state, config);
+      } else if (mouseControlEnabledRef.current && mouseTargetRef.current) {
+        const deltaX = mouseTargetRef.current.x - state.player.x;
+        const deltaY = mouseTargetRef.current.y - state.player.y;
+        const deadZone = 8;
+
+        nextInput = {
+          up: deltaY < -deadZone,
+          down: deltaY > deadZone,
+          left: deltaX < -deadZone,
+          right: deltaX > deadZone,
+        };
+      }
 
       if (isActiveRef.current) {
         session.step(deltaMs / 1000, nextInput);
@@ -215,7 +239,7 @@ export function GameCanvas({
 
   const getCanvasPointerPosition = (event) => {
     const canvas = canvasRef.current;
-    if (!canvas || !editorMode) {
+    if (!canvas) {
       return null;
     }
 
@@ -239,6 +263,10 @@ export function GameCanvas({
   };
 
   const handleCanvasPointerDown = (event) => {
+    if (!editorMode) {
+      return;
+    }
+
     const pointer = getCanvasPointerPosition(event);
     if (!pointer) {
       return;
@@ -282,12 +310,19 @@ export function GameCanvas({
   };
 
   const handleCanvasPointerMove = (event) => {
-    if (!editorMode) {
+    const pointer = getCanvasPointerPosition(event);
+    if (!pointer) {
       return;
     }
 
-    const pointer = getCanvasPointerPosition(event);
-    if (!pointer) {
+    if (!editorMode && mouseControlEnabledRef.current && !autoEnabledRef.current) {
+      mouseTargetRef.current = {
+        x: pointer.pixelX,
+        y: pointer.pixelY,
+      };
+    }
+
+    if (!editorMode) {
       return;
     }
 
@@ -338,12 +373,14 @@ export function GameCanvas({
     dragLabelRef.current = null;
     paintDragRef.current = false;
     lastPaintedTileRef.current = null;
+    mouseTargetRef.current = null;
   };
 
   const handleCanvasPointerCancel = () => {
     dragLabelRef.current = null;
     paintDragRef.current = false;
     lastPaintedTileRef.current = null;
+    mouseTargetRef.current = null;
   };
 
   return (

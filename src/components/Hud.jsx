@@ -12,6 +12,8 @@ export function Hud({
   onToggleAudio,
   autoEnabled,
   onToggleAuto,
+  mouseControlEnabled,
+  onToggleMouseControl,
   mobileProblemsEnabled,
   onToggleMobileProblems,
   npcEnabled,
@@ -75,6 +77,9 @@ export function Hud({
             </button>
             <button type="button" className="ghost-button" onClick={onToggleAuto}>
               Автобот: {autoEnabled ? 'вкл' : 'выкл'}
+            </button>
+            <button type="button" className="ghost-button" onClick={onToggleMouseControl}>
+              Мышь: {mouseControlEnabled ? 'вкл' : 'выкл'}
             </button>
             <button type="button" className="ghost-button" onClick={onToggleMobileProblems}>
               Подвижные проблемы: {mobileProblemsEnabled ? 'вкл' : 'выкл'}
